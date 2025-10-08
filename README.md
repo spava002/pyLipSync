@@ -70,7 +70,12 @@ lipsync = LipSync(
 audio, sr = lb.load("path/to/your/audio.mp3", sr=None)
 
 # Process audio and get phoneme segments
-segments = lipsync.process_audio_segments(audio, sr)
+segments = lipsync.process_audio_segments(
+    audio,
+    sr,
+    window_size_ms=64.0,  # Window size in milliseconds
+    fps=60                # Frames per second for output
+)
 
 # Get the most prominent phoneme for each segment
 for segment in segments:
