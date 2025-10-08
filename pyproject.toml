@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "librosa",
-    "numpy",
+    "numpy<2",
     "scipy",
     "scikit-learn",
 ]
