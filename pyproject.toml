@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pylipsync"
+version = "0.1.0"
+description = "A Python implementation of Hecomi's uLipSync for audio-based lip sync analysis."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "librosa",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+]
