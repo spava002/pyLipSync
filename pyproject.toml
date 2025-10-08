@@ -20,3 +20,6 @@ dependencies = [
     "scipy",
     "scikit-learn",
 ]
+
+[tool.setuptools.package-data]
+pylipsync = ["audio/**/*"]
