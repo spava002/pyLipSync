@@ -6,8 +6,6 @@ from .algorithms import *
 from .types import Phoneme, PhonemeSegment, LipSyncInfo
 from .comparison import CompareMethod, calculate_similarity_score
 
-from concurrent.futures import ThreadPoolExecutor
-
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class LipSync:

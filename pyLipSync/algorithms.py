@@ -4,16 +4,16 @@ import librosa as lb
 
 def low_pass_filter(audio_data: np.ndarray, sample_rate: int, cutoff: float, range_hz: float) -> np.ndarray:
     """Applies a low pass filter to the audio data using scipy."""
-    # Use the exact same calculations as the C# version
+    # Use the exact same calculations
     cutoff_norm = (cutoff - range_hz) / sample_rate
     range_norm = range_hz / sample_rate
     
-    # Calculate filter length (same as C# version)
+    # Calculate filter length
     n = int(np.round(3.1 / range_norm))
     if (n + 1) % 2 == 0:
         n += 1
     
-    # Create filter coefficients using the exact same sinc calculation as C#
+    # Create filter coefficients using the exact same sinc calculation
     b = np.zeros(n, dtype=np.float32)
     for i in range(n):
         x = i - (n - 1) / 2.0
@@ -23,12 +23,13 @@ def low_pass_filter(audio_data: np.ndarray, sample_rate: int, cutoff: float, ran
         else:
             b[i] = 2.0 * cutoff_norm * np.sin(ang) / ang
     
-    # Apply the filter using scipy (this should be equivalent to the manual convolution)
+    # Apply the filter using scipy
     filtered = scipy.signal.lfilter(b, 1.0, audio_data)
     
     return filtered.astype(np.float32)
 
 def downsample(audio_data: np.ndarray, sample_rate: int, target_sample_rate: int) -> np.ndarray:
+    """Downsamples the audio data to the target sample rate using librosa."""
     if sample_rate <= target_sample_rate:
         return audio_data.copy()
     
@@ -37,24 +38,24 @@ def downsample(audio_data: np.ndarray, sample_rate: int, target_sample_rate: int
     return resampled.astype(np.float32)
 
 def pre_emphasis(data: np.ndarray, p: float = 0.97) -> np.ndarray:
-    """Applies pre-emphasis filter using simple calculation (same as C# version)."""
-    # Simple vectorized calculation - much more efficient than loops
+    """Applies pre-emphasis filter using simple calculation."""
+    # Simple vectorized calculation
     emphasized = data.copy().astype(np.float32)
     emphasized[1:] = data[1:] - p * data[:-1]
     return emphasized
 
 def hamming_window(array: np.ndarray) -> np.ndarray:
     """Applies Hamming window using numpy's built-in function."""
-    # Use numpy's built-in Hamming window - much more efficient than manual calculation
+    # Use numpy's built-in Hamming window
     window = np.hamming(len(array)).astype(np.float32)
     return (array * window).astype(np.float32)
 
 def normalize_array(array: np.ndarray, value: float = 1.0) -> np.ndarray:
     """Normalizes the array to the specified maximum value using numpy."""
-    # Find maximum absolute value (equivalent to get_max_value in C#)
+    # Find maximum absolute value
     max_val = np.max(np.abs(array))
     
-    # Check if max_val is essentially zero (same as C# epsilon check)
+    # Check if max_val is essentially zero
     if max_val < np.finfo(float).eps:
         return array.astype(np.float32)
     
@@ -62,11 +63,11 @@ def normalize_array(array: np.ndarray, value: float = 1.0) -> np.ndarray:
     return (array * (value / max_val)).astype(np.float32)
 
 def zero_padding(data: np.ndarray) -> np.ndarray:
-    """Applies zero padding using numpy (same as C# version)."""
+    """Applies zero padding using numpy."""
     n = len(data)
     # Create array of zeros with double the size
     padded = np.zeros(n * 2, dtype=np.float32)
-    # Place original data in the center (same as C# logic)
+    # Place original data in the center
     padded[n//2:n//2 + n] = data
     return padded
 
@@ -74,21 +75,21 @@ def fft_magnitude(data: np.ndarray) -> np.ndarray:
     """Computes FFT and returns magnitude spectrum using numpy."""
     # Use numpy's optimized FFT implementation
     fft_result = np.fft.fft(data)
-    # Return magnitude (absolute value) - same as C# Abs()
+    # Return magnitude (absolute value)
     return np.abs(fft_result).astype(np.float32)
 
 def to_mel(hz: float, slaney: bool = False) -> float:
-    """Converts Hz to Mel scale (same as C# version)."""
+    """Converts Hz to Mel scale."""
     a = 2595.0 if slaney else 1127.0
     return a * np.log(hz / 700.0 + 1.0)
 
 def to_hz(mel: float, slaney: bool = False) -> float:
-    """Converts Mel scale to Hz (same as C# version)."""
+    """Converts Mel scale to Hz."""
     a = 2595.0 if slaney else 1127.0
     return 700.0 * (np.exp(mel / a) - 1.0)
 
 def mel_filter_bank(spectrum: np.ndarray, sample_rate: int, mel_div: int) -> np.ndarray:
-    """Optimized mel filter bank using vectorized numpy operations (same logic as C#)."""
+    """Optimized mel filter bank using vectorized numpy operations."""
     f_max = sample_rate / 2
     mel_max = to_mel(f_max)
     n_max = len(spectrum) // 2
@@ -134,7 +135,7 @@ def power_to_db(array: np.ndarray) -> np.ndarray:
     return (10.0 * np.log10(np.maximum(array, 1e-10))).astype(np.float32)
 
 def dct(spectrum: np.ndarray) -> np.ndarray:
-    """Computes DCT using the exact same method as C# version."""
+    """Computes DCT using the exact same method."""
     n = len(spectrum)
     cepstrum = np.zeros(n, dtype=np.float32)
     a = np.pi / n
