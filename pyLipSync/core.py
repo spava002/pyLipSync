@@ -3,7 +3,7 @@ import librosa as lb
 import numpy as np
 from collections import defaultdict
 from .algorithms import *
-from .types import Phoneme, PhonemeSegment, LipSyncInfo
+from .types import PhonemeName, Phoneme, PhonemeSegment, LipSyncInfo
 from .comparison import CompareMethod, calculate_similarity_score
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +17,8 @@ class LipSync:
         self, 
         phoneme_templates_path: str = "phonemes.json",
         audio_templates_path: str = "audio",
-        compare_method: CompareMethod = CompareMethod.L2_NORM
+        compare_method: CompareMethod = CompareMethod.L2_NORM,
+        silence_threshold: float = 0.5
     ):
         """
         A pipeline for analyzing audio and determining the best phoneme for a given audio chunk.
@@ -26,15 +27,17 @@ class LipSync:
             phoneme_templates_path: Path or file name to the phoneme templates file located within the module directory
             audio_templates_path: Path or file name to the audio templates directory located within the module directory
             compare_method: Method to use for comparing MFCCs (L1Norm, L2Norm, or CosineSimilarity)
+            silence_threshold: Threshold of silence before considering a phoneme segment as entirely silence
         """
         self.phoneme_templates_path = os.path.join(MODULE_DIR, phoneme_templates_path)
         self.audio_templates_path = os.path.join(MODULE_DIR, audio_templates_path)
+        self.silence_threshold = silence_threshold
 
         self.phoneme_templates = self._get_phoneme_templates()
         self.means, self.std_devs = self._calculate_means_and_stds(self.phoneme_templates)
         self.compare_method = compare_method
 
-    def _get_phoneme_templates(self) -> dict:
+    def _get_phoneme_templates(self) -> dict[PhonemeName, list]:
         """Get the phoneme templates from the file or create them if they don't exist.
         
         Returns:
@@ -49,16 +52,18 @@ class LipSync:
             print(f"Phoneme templates built and saved to {self.phoneme_templates_path}")
         return phoneme_templates
 
-    def _load_phoneme_templates(self) -> dict:
+    def _load_phoneme_templates(self) -> dict[PhonemeName, list]:
         """Load the phoneme templates from the file.
         
         Returns:
             A dictionary of phonemes and their vectors
         """
         with open(self.phoneme_templates_path) as f:
-            return json.load(f)
+            phoneme_templates = json.load(f)
+            # Convert the string keys back to a PhonemeName enum
+            return {PhonemeName(name): templates for name, templates in phoneme_templates.items()}
 
-    def _create_phoneme_templates(self) -> dict[str, list]:
+    def _create_phoneme_templates(self) -> dict[PhonemeName, list]:
         """Create phoneme templates from the audio templates.
         
         Returns:
@@ -75,8 +80,11 @@ class LipSync:
         if not phoneme_audio_folders:
             raise FileNotFoundError(f"No folders found within {self.audio_templates_path}!")
 
+        valid_phoneme_names = set([phoneme.value for phoneme in PhonemeName])
+
         for phoneme_audio_folder in phoneme_audio_folders:
-            phoneme = os.path.basename(phoneme_audio_folder)
+            phoneme = self._create_phoneme_name(os.path.basename(phoneme_audio_folder), valid_phoneme_names)
+            
             for file in os.listdir(phoneme_audio_folder):
                 # Skip if not an audio file
                 if not file.endswith(self.AUDIO_EXTENSIONS):
@@ -94,11 +102,23 @@ class LipSync:
             raise FileNotFoundError(f"Could not create phoneme templates. No audio files were found!")
 
         with open(self.phoneme_templates_path, "w") as f:
-            json.dump(phoneme_templates, f, indent=4)
+            # Convert the PhonemeName enum to a string so it can be serialized
+            serializable_phoneme_templates = {name.value: templates for name, templates in phoneme_templates.items()}
+            json.dump(serializable_phoneme_templates, f, indent=4)
         
         return phoneme_templates
 
-    def _calculate_means_and_stds(self, phonemes_templates: dict[str, list]) -> tuple[list, list]:
+    def _create_phoneme_name(self, phoneme_name: str, valid_phoneme_names: set[str]) -> PhonemeName:
+        """Creates a PhonemeName enum from a string.
+        
+        Args:
+            phoneme_name: The phoneme name to create
+        """
+        if phoneme_name not in valid_phoneme_names:
+            raise ValueError(f"Invalid phoneme name: {phoneme_name}! If you are using a custom phoneme, add it to the PhonemeName enum in types.py.")
+        return PhonemeName(phoneme_name)
+
+    def _calculate_means_and_stds(self, phonemes_templates: dict[PhonemeName, list]) -> tuple[list, list]:
         """Calculate means and standard deviations across all phoneme vectors.
         
         Args:
@@ -141,7 +161,7 @@ class LipSync:
         # Standardize the input MFCC
         normalized_mfcc = (mfcc - means) / std_devs
         
-        phonemes: list[Phoneme] = []
+        phonemes = []
         # Calculate score for each phoneme
         for phoneme, templates in self.phoneme_templates.items():
             phoneme_score = 0.0
@@ -158,12 +178,46 @@ class LipSync:
             
             phonemes.append(Phoneme(phoneme, phoneme_score))
 
+        return self._apply_silence_threshold(phonemes)
+
+    def _apply_silence_threshold(self, phonemes: list[Phoneme]) -> list[Phoneme]:
+        """Applies silence threshold to determine if segment of phonemes is silent or contains speech.
         
-        # Normalize scores to sum to 1
+        If silence target value is above the threshold, it becomes the only active phoneme.
+        Otherwise, silence is removed and remaining phonemes are normalized.
+        
+        Args:
+            phonemes: A list of Phoneme objects
+
+        Returns:
+            A list of Phoneme objects with threshold applied
+        """
+        # First normalize to compare silence fairly against threshold
+        phonemes = self._normalize_scores(phonemes)
+
+        silence_phoneme = next((p for p in phonemes if p.name == PhonemeName.SILENCE), None)
+        
+        if silence_phoneme:
+            if silence_phoneme.target >= self.silence_threshold:
+                # Make silence dominant
+                for phoneme in phonemes:
+                    phoneme.target = 1.0 if phoneme.name == PhonemeName.SILENCE else 0.0
+            else:
+                # Remove silence's target value and re-normalize remaining phonemes
+                silence_phoneme.target = 0.0
+                phonemes = self._normalize_scores(phonemes)
+
+        return phonemes
+
+    def _normalize_scores(self, phonemes: list[Phoneme]) -> list[Phoneme]:
+        """Normalizes phoneme target values to sum of 1.
+        
+        Args:
+            phonemes: A list of Phoneme objects
+        """
         total_score = sum(phoneme.target for phoneme in phonemes)
         for phoneme in phonemes:
             phoneme.target = phoneme.target / total_score if total_score > 0 else 0.0
-        
         return phonemes
 
     def _process_audio(
@@ -247,27 +301,5 @@ class LipSync:
             # Process with full window, store only hop
             lipsync_info = self._process_audio(downsampled_chunk, self.TARGET_SAMPLE_RATE)
             segments.append(PhonemeSegment(original_hop_chunk, lipsync_info.phonemes))
-        
-        # Normalize the audio data based on the most prominent phoneme
-        silence_threshold = 0.5
-        for segment in segments:
-            max_target_phoneme = segment.get_max_target_phoneme()
-            # Make silence the most prominent phoneme
-            if max_target_phoneme.name == "silence" and max_target_phoneme.target >= silence_threshold:
-                # Max out silence, set all other phonemes to 0
-                for phoneme in segment.phonemes:
-                    if phoneme.name == "silence":
-                        phoneme.target = 1.0
-                    else:
-                        phoneme.target = 0.0
-            else:
-                # Remove silence phoneme and re-normalize the values
-                silence_phoneme = next((phoneme for phoneme in segment.phonemes if phoneme.name == "silence"), None)
-                if silence_phoneme:
-                    silence_phoneme.target = 0.0
-                # Re-normalize the values
-                total_target = sum(phoneme.target for phoneme in segment.phonemes)
-                for phoneme in segment.phonemes:
-                    phoneme.target = phoneme.target / total_target if total_target > 0 else 0.0
         
         return segments
