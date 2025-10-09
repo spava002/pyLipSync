@@ -21,11 +21,5 @@ dependencies = [
     "scikit-learn",
 ]
 
-[tool.setuptools]
-include-package-data = true
-
 [tool.setuptools.packages.find]
 include = ["pyLipSync*"]
-
-[tool.setuptools.package-data]
-pyLipSync = ["audio/**/*"]
