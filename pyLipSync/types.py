@@ -2,7 +2,8 @@ import numpy as np
 from enum import Enum
 from dataclasses import dataclass, field
 
-# List of supported phonemes. If adding a new phoneme, it must be added here.
+# name = the actual phoneme name
+# value = the string name of the folder containing the audio files for the phoneme
 class PhonemeName(Enum):
     A = "aa"
     E = "ee"
