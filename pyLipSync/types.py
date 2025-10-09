@@ -1,13 +1,23 @@
 import numpy as np
+from enum import Enum
 from dataclasses import dataclass, field
+
+# List of supported phonemes. If adding a new phoneme, it must be added here.
+class PhonemeName(Enum):
+    A = "aa"
+    E = "ee"
+    I = "ih"
+    O = "oh"
+    U = "ou"
+    SILENCE = "silence"
 
 @dataclass
 class Phoneme:
-    name: str
+    name: PhonemeName
     target: float
 
     def to_dict(self):
-        return {"name": self.name, "target": self.target}
+        return {"name": self.name.value, "target": self.target}
 
 @dataclass
 class PhonemeSegment:
