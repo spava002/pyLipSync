@@ -2,6 +2,10 @@ import numpy as np
 import scipy.signal
 import librosa as lb
 
+def rms_volume(audio_data: np.ndarray) -> float:
+    """Calculates the RMS of the audio data."""
+    return np.sqrt(np.mean(audio_data ** 2))
+
 def low_pass_filter(audio_data: np.ndarray, sample_rate: int, cutoff: float, range_hz: float) -> np.ndarray:
     """Applies a low pass filter to the audio data using scipy."""
     # Use the exact same calculations

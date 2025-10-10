@@ -22,6 +22,7 @@ class Phoneme:
 
 @dataclass
 class PhonemeSegment:
+    rms_volume: float
     audio: np.ndarray
     phonemes: list[Phoneme]
 
@@ -33,5 +34,6 @@ class PhonemeSegment:
 
 @dataclass
 class LipSyncInfo:
+    rms_volume: float
     mfcc: list[float]
     phonemes: list[Phoneme] = field(default_factory=list)
