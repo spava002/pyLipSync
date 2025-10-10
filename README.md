@@ -50,6 +50,7 @@ To add additional phonemes:
 1. Create a new folder inside `pyLipSync/audio/`
 2. **The folder name becomes the phoneme name** (e.g., `pyLipSync/audio/th/` for "th" sounds)
 3. Add audio sample files to the new folder
+4. Update the PhonemeNames enum in types.py to support the new phoneme.
 
 The library will automatically detect and use all phoneme folders when building templates.
 
