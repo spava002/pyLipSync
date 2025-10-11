@@ -2,6 +2,7 @@ import os, json
 import librosa as lb
 import numpy as np
 from collections import defaultdict
+from math import log10
 from .algorithms import *
 from .types import PhonemeName, Phoneme, PhonemeSegment, LipSyncInfo
 from .comparison import CompareMethod, calculate_similarity_score
@@ -12,6 +13,8 @@ class LipSync:
     AUDIO_EXTENSIONS = ("wav", "mp3", "ogg", "flac", "m4a", "wma", "aac", "aiff", "au", "raw", "pcm")
     TARGET_SAMPLE_RATE = 16000
     RANGE_HZ = 500
+    MIN_VOLUME = -2.5
+    MAX_VOLUME = -1.5
     
     def __init__(
         self, 
@@ -181,7 +184,13 @@ class LipSync:
         normalized_volume = self._normalize_volume(volume)
 
         phonemes = self._apply_silence_threshold(phonemes)
-        return LipSyncInfo(mfcc.tolist(), volume, phonemes)
+        return LipSyncInfo(mfcc.tolist(), volume, normalized_volume, phonemes)
+
+    def _normalize_volume(self, volume: float) -> float:
+        norm_volume = log10(volume)
+        norm_volume = (norm_volume - self.MIN_VOLUME) / max(self.MAX_VOLUME - self.MIN_VOLUME, 1e-4)
+        norm_volume = min(max(norm_volume, 0), 1)
+        return norm_volume
 
     def _apply_silence_threshold(self, phonemes: list[Phoneme]) -> list[Phoneme]:
         """Applies silence threshold to determine if segment of phonemes is silent or contains speech.
@@ -304,6 +313,8 @@ class LipSync:
             
             # Process with full window, store only hop
             lipsync_info = self._process_audio(downsampled_chunk, self.TARGET_SAMPLE_RATE)
-            segments.append(PhonemeSegment(lipsync_info.rms_volume, original_hop_chunk, lipsync_info.phonemes))
+            segments.append(
+                PhonemeSegment(lipsync_info.volume, lipsync_info.normalized_volume, original_hop_chunk, lipsync_info.phonemes)
+            )
         
         return segments
