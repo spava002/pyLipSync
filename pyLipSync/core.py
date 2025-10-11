@@ -145,7 +145,7 @@ class LipSync:
         
         return means.tolist(), std_devs.tolist()
 
-    def _calculate_scores(self, mfcc: np.ndarray, volume: float) -> list[Phoneme]:
+    def _calculate_scores(self, mfcc: np.ndarray, volume: float) -> LipSyncInfo:
         """Calculate scores for each phoneme template and normalize them to sum to 1.
         
         Args:
@@ -176,30 +176,12 @@ class LipSync:
                 score = calculate_similarity_score(normalized_mfcc, normalized_template, self.compare_method)
                 phoneme_score += score
             
-            if phoneme == PhonemeName.SILENCE:
-                continue
             phonemes.append(Phoneme(phoneme, phoneme_score))
 
-        normalized_phonemes = self._normalize_scores(phonemes)
-        return self._apply_volume_weighting(normalized_phonemes, volume)
-        # return self._apply_silence_threshold(phonemes)
-
-    def _normalize_volume(self, volume: float) -> float:
-        from math import log10
-
-        MIN_VOLUME = -2.0
-        MAX_VOLUME = -0.0
-
-        norm_volume = log10(volume)
-        norm_volume = (norm_volume - MIN_VOLUME) / max(MAX_VOLUME - MIN_VOLUME, 1e-4)
-        norm_volume = min(max(norm_volume, 0), 1)
-        return norm_volume
-
-    def _apply_volume_weighting(self, phonemes: list[Phoneme], volume: float) -> list[Phoneme]:
         normalized_volume = self._normalize_volume(volume)
-        for phoneme in phonemes:
-            phoneme.target *= normalized_volume
-        return phonemes
+
+        phonemes = self._apply_silence_threshold(phonemes)
+        return LipSyncInfo(mfcc.tolist(), volume, phonemes)
 
     def _apply_silence_threshold(self, phonemes: list[Phoneme]) -> list[Phoneme]:
         """Applies silence threshold to determine if segment of phonemes is silent or contains speech.
@@ -278,12 +260,10 @@ class LipSync:
         mel_cepstrum = dct(mel_db)
         mfcc = mel_cepstrum[1: mfcc_num + 1]
 
-        lipsync_info = LipSyncInfo(volume, mfcc.tolist())
+        if not calculate_scores:
+            return LipSyncInfo(mfcc.tolist())
 
-        if calculate_scores:
-            lipsync_info.phonemes = self._calculate_scores(mfcc, volume)
-        
-        return lipsync_info
+        return self._calculate_scores(mfcc, volume)
 
     def process_audio_segments(
         self,
