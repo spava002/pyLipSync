@@ -7,7 +7,7 @@ lipsync = LipSync(
 
 # Load in a test audio file to generate phoneme segments for
 # audio, sr = lb.load("pyLipSync/audio/oh/O_female.mp3", sr=None)
-audio, sr = lb.load("pyLipSync/audio/ih/I_female.mp3", sr=None)
+audio, sr = lb.load("test_female.mp3", sr=None)
 
 segments = lipsync.process_audio_segments(audio, sr)
 
