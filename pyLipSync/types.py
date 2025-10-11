@@ -2,27 +2,18 @@ import numpy as np
 from enum import Enum
 from dataclasses import dataclass, field
 
-# name = the actual phoneme name
-# value = the string name of the folder containing the audio files for the phoneme
-class PhonemeName(Enum):
-    A = "aa"
-    E = "ee"
-    I = "ih"
-    O = "oh"
-    U = "ou"
-    SILENCE = "silence"
-
 @dataclass
 class Phoneme:
-    name: PhonemeName
+    name: str
     target: float
 
     def to_dict(self):
-        return {"name": self.name.value, "target": self.target}
+        return {"name": self.name, "target": self.target}
 
 @dataclass
 class PhonemeSegment:
-    rms_volume: float
+    volume: float
+    normalized_volume: float
     audio: np.ndarray
     phonemes: list[Phoneme]
 
@@ -34,6 +25,7 @@ class PhonemeSegment:
 
 @dataclass
 class LipSyncInfo:
-    rms_volume: float
     mfcc: list[float]
+    volume: float = None
+    normalized_volume: float = None
     phonemes: list[Phoneme] = field(default_factory=list)
