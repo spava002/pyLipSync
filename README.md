@@ -30,39 +30,15 @@ If you prefer to install dependencies separately:
 pip install -r requirements.txt
 ```
 
-## ⚠️ Important: Audio Template Setup
+## Quick Start
 
-**Before the library will work, you MUST add audio template files to the phoneme folders.**
-
-The library includes pre-configured folders for basic phonemes:
-- `pyLipSync/audio/aa/` - for "A" sounds
-- `pyLipSync/audio/ee/` - for "E" sounds  
-- `pyLipSync/audio/ih/` - for "I" sounds
-- `pyLipSync/audio/oh/` - for "O" sounds
-- `pyLipSync/audio/ou/` - for "U" sounds
-- `pyLipSync/audio/silence/` - for silence
-
-**You need to add your own audio samples (`.mp3`, `.wav`, `.ogg`, `.flac`, etc.) to these folders.** The library will use these samples to a build phoneme template for matching onto new incoming audio.
-
-### Adding More Phonemes
-
-To add additional phonemes:
-1. Create a new folder inside `pyLipSync/audio/`
-2. **The folder name becomes the phoneme name** (e.g., `pyLipSync/audio/th/` for "th" sounds)
-3. Add audio sample files to the new folder
-4. Update the PhonemeNames enum in types.py to support the new phoneme.
-
-The library will automatically detect and use all phoneme folders when building templates.
-
-## Usage
-
-Basic usage example (see `main.py` for reference):
+The library comes with built-in audio templates for common phonemes, so you can start using it immediately:
 
 ```python
 import librosa as lb
 from pyLipSync import LipSync, CompareMethod
 
-# Initialize LipSync with your preferred comparison method
+# Initialize LipSync - works out of the box with default templates
 lipsync = LipSync(
     compare_method=CompareMethod.COSINE_SIMILARITY  # Options: L1_NORM, L2_NORM, COSINE_SIMILARITY
 )
@@ -84,19 +60,69 @@ for segment in segments:
     print(f"Phoneme: {max_phoneme.name}, Confidence: {max_phoneme.target:.2f}")
 ```
 
-## Quick Start
+## Default Phonemes
 
-1. **Install the package**:
-   ```bash
-   pip install git+https://github.com/spava002/pyLipSync.git
+The library includes pre-configured phoneme templates for:
+- `aa` - "A" sounds
+- `ee` - "E" sounds
+- `ih` - "I" sounds
+- `oh` - "O" sounds
+- `ou` - "U" sounds
+- `silence` - silence/no speech
+
+These templates are ready to use without any additional setup.
+
+### Adding New Phonemes
+
+To add additional phonemes (e.g., consonants like "th", "sh", "f"):
+
+1. Create a folder with all your phoneme names (or expand off the existing audio/ folder)
+   ```
+   audio/
+   ├── aa/
+   ├── ee/
+   ├── th/          # New phoneme!
+   │   └── th_sound.mp3
+   └── sh/          # Another new one!
+       └── sh_sound.mp3
    ```
 
-2. **Add audio templates** to `pyLipSync/audio/` folders (REQUIRED!)
+2. Add audio samples to each folder (`.mp3`, `.wav`, `.ogg`, `.flac`, etc.)
 
-3. **Run the example**:
-   ```bash
-   python main.py
+3. Use your custom templates:
+   ```python
+   lipsync = LipSync(
+       audio_templates_path="/path/to/my_custom_audio" # Not necessary if expanding within the audio/ folder
+   )
    ```
+
+**Note:** The folder name becomes the phoneme identifier in the output.
+
+### Audio Sample Guidelines
+
+- **Format**: Any common audio format (MP3, WAV, OGG, FLAC, M4A, AAC, AIFF)
+- **Duration**: Short samples (0.5-2 seconds) work best
+- **Quality**: Clear pronunciation without background noise
+- **Multiple samples**: You can add multiple files per phoneme for better accuracy
+
+## Advanced Configuration
+
+```python
+lipsync = LipSync(
+    phoneme_templates_path="phonemes.json",      # Path to save/load templates
+    audio_templates_path="audio",                # Path to audio samples
+    compare_method=CompareMethod.COSINE_SIMILARITY,  # Comparison method
+    silence_threshold=0.5,                       # Threshold for silence detection (0-1)
+    silence_phoneme="silence"                    # Name of your silence phoneme folder
+)
+```
+
+## How It Works
+
+1. **Template Building**: On first run, the library analyzes your audio samples and creates MFCC (Mel-frequency cepstral coefficients) templates, saved to `phonemes.json` (or whatever phoneme_templates_path you choose)
+2. **Audio Processing**: Input audio is analyzed in segments using the same MFCC extraction
+3. **Phoneme Matching**: Each segment is compared against all phoneme templates
+4. **Target Calculation**: Returns confidence scores (0-1) for each phoneme per segment
 
 ## Credits
 
