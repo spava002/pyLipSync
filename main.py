@@ -6,10 +6,10 @@ lipsync = LipSync(
 )
 
 # Load in a test audio file to generate phoneme segments for
-audio, sr = lb.load("pyLipSync/audio/oh/O_female.mp3", sr=None)
+audio, sr = lb.load("pyLipSync/audio/aa/A_female.mp3", sr=None)
 
 segments = lipsync.process_audio_segments(audio, sr)
 
 # View the most prominent phoneme for each segment
 for segment in segments:
-    print((segment.get_max_target_phoneme(), segment.volume, segment.normalized_volume))
+    print((segment.is_silence(), segment.most_prominent_phoneme(), segment.volume, segment.normalized_volume))
