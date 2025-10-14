@@ -4,18 +4,10 @@ A Python implementation of [Hecomi's uLipSync](https://github.com/hecomi/uLipSyn
 
 ## Installation
 
-### Install from PyPI (Coming Soon)
+### Install from PyPI
 
 ```bash
 pip install pylipsync
-```
-
-### Install from GitHub
-
-You can install directly from the GitHub repository:
-
-```bash
-pip install git+https://github.com/spava002/pyLipSync.git
 ```
 
 ### Install from Local Clone
