@@ -9,23 +9,34 @@ description = "A Python implementation of Hecomi's uLipSync for audio-based lip 
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
+keywords = ["lip-sync", "audio", "phoneme", "mfcc", "speech-analysis", "animation"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "librosa",
-    "numpy<2",
-    "scipy",
-    "scikit-learn",
+    "librosa>=0.10.0",
+    "numpy>=1.20.0,<2.0.0",
+    "scipy>=1.7.0",
+    "scikit-learn>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/spava002/pyLipSync"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["pyLipSync*"]
+include = ["pylipsync*"]
 
 [tool.setuptools.package-data]
-pyLipSync = ["audio/**/*"]
+pyLipSync = ["data/**/*"]
