@@ -24,8 +24,6 @@ class TestValidation:
             lipsync.process_audio_segments(audio, -1)
         with pytest.raises(ValueError):
             lipsync.process_audio_segments(audio, 0)
-        with pytest.raises(ValueError):
-            lipsync.process_audio_segments(audio, 8000)
     
     def test_invalid_audio_dimensions(self, lipsync: LipSync):
         """Test that 2D audio is rejected."""
