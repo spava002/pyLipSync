@@ -39,4 +39,4 @@ include-package-data = true
 include = ["pylipsync*"]
 
 [tool.setuptools.package-data]
-pyLipSync = ["data/**/*"]
+pylipsync = ["data/**/*"]
