@@ -70,6 +70,32 @@ The library includes pre-configured phoneme templates for:
 
 These templates are ready to use without any additional setup.
 
+### Adding New Phonemes
+
+To add additional phonemes (e.g., consonants like "th", "sh", "f"):
+
+1. Create a folder with all your phoneme names (or expand off the existing audio/ folder)
+   ```
+   audio/
+   ├── aa/
+   ├── ee/
+   ├── th/          # New phoneme!
+   │   └── th_sound.mp3
+   └── sh/          # Another new one!
+       └── sh_sound.mp3
+   ```
+
+2. Add audio samples to each folder (`.mp3`, `.wav`, `.ogg`, `.flac`, etc.)
+
+3. Use your custom templates:
+   ```python
+   lipsync = LipSync(
+       audio_templates_path="/path/to/my_custom_audio" # Not necessary if expanding within the audio/ folder
+   )
+   ```
+
+**Note:** The folder name becomes the phoneme identifier in the output.
+
 ## How It Works
 
 1. **Template Loading**: The library loads pre-computed MFCC templates from `data/phonemes.json`
@@ -77,19 +103,6 @@ These templates are ready to use without any additional setup.
 3. **Phoneme Matching**: Each segment is compared against all phoneme templates using the selected comparison method
 4. **Target Calculation**: Returns normalized confidence scores (0-1) for each phoneme per segment
 5. **Silence Detection**: Segments below the silence threshold have all phoneme targets set to 0
-
-## Examples
-
-Check out the `examples/` directory for more usage examples:
-- `examples/usage.py` - Basic usage demonstration
-
-## Requirements
-
-- Python >= 3.9
-- librosa >= 0.10.0
-- numpy >= 1.20.0, < 2.0.0
-- scipy >= 1.7.0
-- scikit-learn >= 1.0.0
 
 ## Credits
 
