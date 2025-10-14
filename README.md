@@ -1,8 +1,14 @@
-# pyLipSync
+# pylipsync
 
 A Python implementation of [Hecomi's uLipSync](https://github.com/hecomi/uLipSync) for audio-based lip sync analysis. This library analyzes audio and determines phoneme targets for lip synchronization in real-time applications.
 
 ## Installation
+
+### Install from PyPI (Coming Soon)
+
+```bash
+pip install pylipsync
+```
 
 ### Install from GitHub
 
@@ -22,21 +28,13 @@ cd pyLipSync
 pip install -e .
 ```
 
-### Install Dependencies via requirements.txt
-
-If you prefer to install dependencies separately:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Quick Start
 
 The library comes with built-in audio templates for common phonemes, so you can start using it immediately:
 
 ```python
 import librosa as lb
-from pyLipSync import LipSync, CompareMethod
+from pylipsync import LipSync, CompareMethod
 
 # Initialize LipSync - works out of the box with default templates
 lipsync = LipSync(
@@ -56,8 +54,8 @@ segments = lipsync.process_audio_segments(
 
 # Get the most prominent phoneme for each segment
 for segment in segments:
-    max_phoneme = segment.get_max_target_phoneme()
-    print(f"Phoneme: {max_phoneme.name}, Confidence: {max_phoneme.target:.2f}")
+    most_prominent_phoneme = segment.most_prominent_phoneme() if not segment.is_silence() else None
+    print(f"({segment.start_time:.4f}-{segment.end_time:.4f})s | Most Prominent Phoneme: {most_prominent_phoneme}")
 ```
 
 ## Default Phonemes
@@ -72,61 +70,30 @@ The library includes pre-configured phoneme templates for:
 
 These templates are ready to use without any additional setup.
 
-### Adding New Phonemes
-
-To add additional phonemes (e.g., consonants like "th", "sh", "f"):
-
-1. Create a folder with all your phoneme names (or expand off the existing audio/ folder)
-   ```
-   audio/
-   ├── aa/
-   ├── ee/
-   ├── th/          # New phoneme!
-   │   └── th_sound.mp3
-   └── sh/          # Another new one!
-       └── sh_sound.mp3
-   ```
-
-2. Add audio samples to each folder (`.mp3`, `.wav`, `.ogg`, `.flac`, etc.)
-
-3. Use your custom templates:
-   ```python
-   lipsync = LipSync(
-       audio_templates_path="/path/to/my_custom_audio" # Not necessary if expanding within the audio/ folder
-   )
-   ```
-
-**Note:** The folder name becomes the phoneme identifier in the output.
-
-### Audio Sample Guidelines
-
-- **Format**: Any common audio format (MP3, WAV, OGG, FLAC, M4A, AAC, AIFF)
-- **Duration**: Short samples (0.5-2 seconds) work best
-- **Quality**: Clear pronunciation without background noise
-- **Multiple samples**: You can add multiple files per phoneme for better accuracy
-
-## Advanced Configuration
-
-```python
-lipsync = LipSync(
-    phoneme_templates_path="phonemes.json",      # Path to save/load templates
-    audio_templates_path="audio",                # Path to audio samples
-    compare_method=CompareMethod.COSINE_SIMILARITY,  # Comparison method
-    silence_threshold=0.5,                       # Threshold for silence detection (0-1)
-    silence_phoneme="silence"                    # Name of your silence phoneme folder
-)
-```
-
 ## How It Works
 
-1. **Template Building**: On first run, the library analyzes your audio samples and creates MFCC (Mel-frequency cepstral coefficients) templates, saved to `phonemes.json` (or whatever phoneme_templates_path you choose)
-2. **Audio Processing**: Input audio is analyzed in segments using the same MFCC extraction
-3. **Phoneme Matching**: Each segment is compared against all phoneme templates
-4. **Target Calculation**: Returns confidence scores (0-1) for each phoneme per segment
+1. **Template Loading**: The library loads pre-computed MFCC templates from `data/phonemes.json`
+2. **Audio Processing**: Input audio is processed in overlapping windows using MFCC extraction
+3. **Phoneme Matching**: Each segment is compared against all phoneme templates using the selected comparison method
+4. **Target Calculation**: Returns normalized confidence scores (0-1) for each phoneme per segment
+5. **Silence Detection**: Segments below the silence threshold have all phoneme targets set to 0
+
+## Examples
+
+Check out the `examples/` directory for more usage examples:
+- `examples/usage.py` - Basic usage demonstration
+
+## Requirements
+
+- Python >= 3.9
+- librosa >= 0.10.0
+- numpy >= 1.20.0, < 2.0.0
+- scipy >= 1.7.0
+- scikit-learn >= 1.0.0
 
 ## Credits
 
-This is a Python implementation of [uLipSync](https://github.com/hecomi/uLipSync) by Hecomi. 
+This is a Python implementation of [uLipSync](https://github.com/hecomi/uLipSync) by Hecomi.
 
 ## License
 
