@@ -10,7 +10,7 @@ lipsync = LipSync(
 )
 
 # Load in a test audio file to generate phoneme segments for
-audio, sr = lb.load("your_audio.mp3", sr=None)
+audio, sr = lb.load("path/to/your/audio.mp3", sr=None)
 
 segments = lipsync.process_audio_segments(audio, sr)
 
