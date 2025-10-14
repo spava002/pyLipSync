@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
-from pyLipSync import LipSync, CompareMethod
-
+from pylipsync import LipSync, CompareMethod
 
 class TestValidation:
     """Test that bad inputs are caught."""

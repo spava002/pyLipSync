@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from pyLipSync import LipSync
+from pylipsync import LipSync
 
 @pytest.fixture
 def simple_sine_wave():
