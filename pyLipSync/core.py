@@ -1,15 +1,50 @@
-import os, json
-import librosa as lb
+"""
+Core lip sync processing using MFCC-based phoneme detection.
+
+This module provides the main LipSync class for analyzing audio
+and determining phoneme targets for lip synchronization.
+"""
+
+import os, json, logging
 import numpy as np
+import librosa as lb
 from collections import defaultdict
-from math import log10
+
 from .algorithms import *
 from .types import Phoneme, PhonemeSegment, LipSyncInfo
 from .comparison import CompareMethod, calculate_similarity_score
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+logger = logging.getLogger(__name__)
+
 class LipSync:
+    """
+    Audio-based lip sync analyzer using Mel-frequency cepstral coefficients (MFCCs).
+    
+    This class processes audio data and determines phoneme targets for lip synchronization
+    in real-time applications. It uses pre-computed phoneme templates and compares input
+    audio against them using various similarity metrics.
+    
+    Attributes:
+        AUDIO_EXTENSIONS: Supported audio file formats
+        TARGET_SAMPLE_RATE: Internal processing sample rate (16kHz)
+        RANGE_HZ: Frequency range for filtering
+        MIN_VOLUME: Minimum volume threshold for normalization
+        MAX_VOLUME: Maximum volume threshold for normalization
+    
+    Example:
+        >>> import librosa
+        >>> from pylipsync import LipSync, CompareMethod
+        >>> 
+        >>> lipsync = LipSync(compare_method=CompareMethod.COSINE_SIMILARITY)
+        >>> audio, sr = librosa.load("speech.mp3", sr=None)
+        >>> segments = lipsync.process_audio_segments(audio, sr, fps=60)
+        >>> 
+        >>> for segment in segments:
+        ...     most_prominent_phoneme = segment.most_prominent_phoneme() if not segment.is_silence() else None
+        ...     print(f"({segment.start_time:.4f}-{segment.end_time:.4f})s | Most Prominent Phoneme: {most_prominent_phoneme}")
+    """
     AUDIO_EXTENSIONS = ("wav", "mp3", "ogg", "flac", "m4a", "wma", "aac", "aiff", "au", "raw", "pcm")
     TARGET_SAMPLE_RATE = 16000
     RANGE_HZ = 500
@@ -18,10 +53,10 @@ class LipSync:
     
     def __init__(
         self, 
-        phoneme_templates_path: str = "phonemes.json",
-        audio_templates_path: str = "audio",
-        compare_method: CompareMethod = CompareMethod.L2_NORM,
-        silence_threshold: float = 0.5,
+        phoneme_templates_path: str = "data/phonemes.json",
+        audio_templates_path: str = "data/audio",
+        compare_method: CompareMethod = CompareMethod.COSINE_SIMILARITY,
+        silence_threshold: float = 0.3,
         silence_phoneme: str = "silence"
     ):
         """
@@ -34,14 +69,21 @@ class LipSync:
             silence_threshold: Threshold of silence before considering a phoneme segment as entirely silence
             silence_phoneme: The name of the phoneme to use for silence
         """
+
+        if silence_threshold < 0 or silence_threshold > 1:
+            raise ValueError(
+                f"Silence threshold must be between 0 and 1, got {silence_threshold}"
+                f"Use a value closer to 0 for higher silence detection and closer to 1 for lower silence detection."
+            )
+
         self.phoneme_templates_path = os.path.join(MODULE_DIR, phoneme_templates_path)
         self.audio_templates_path = os.path.join(MODULE_DIR, audio_templates_path)
+        self.compare_method = compare_method
         self.silence_threshold = silence_threshold
         self.silence_phoneme = silence_phoneme
 
         self.phoneme_templates = self._get_phoneme_templates()
         self.means, self.std_devs = self._calculate_means_and_stds(self.phoneme_templates)
-        self.compare_method = compare_method
 
     def _get_phoneme_templates(self) -> dict[str, list]:
         """Get the phoneme templates from the file or create them if they don't exist.
@@ -51,11 +93,11 @@ class LipSync:
         """
         try:
             phoneme_templates = self._load_phoneme_templates()
-            print(f"Phoneme templates loaded from {self.phoneme_templates_path}")
+            logger.info(f"Phoneme templates loaded from {self.phoneme_templates_path}")
         except FileNotFoundError:
-            print(f"Phoneme templates file not found at {self.phoneme_templates_path}, building templates...")
+            logger.info(f"Phoneme templates file not found at {self.phoneme_templates_path}, building templates...")
             phoneme_templates = self._create_phoneme_templates()
-            print(f"Phoneme templates built and saved to {self.phoneme_templates_path}")
+            logger.info(f"Phoneme templates built and saved to {self.phoneme_templates_path}")
         return phoneme_templates
 
     def _load_phoneme_templates(self) -> dict[str, list]:
@@ -97,8 +139,8 @@ class LipSync:
                 audio_data, sample_rate = lb.load(audio_file_path, sr=None)
 
                 # Calculate MFCC and add to phoneme dictionary
-                mfcc = self._process_audio(audio_data, sample_rate, calculate_scores=False).mfcc
-                phoneme_templates[phoneme].append(mfcc)
+                lipsync_info = self._process_audio(audio_data, sample_rate, calculate_scores=False)
+                phoneme_templates[phoneme].append(lipsync_info.mfcc)
 
         if not phoneme_templates:
             raise FileNotFoundError(f"Could not create phoneme templates. No audio files were found!")
@@ -194,7 +236,12 @@ class LipSync:
         return silence_phoneme.target / target_sum >= self.silence_threshold
 
     def _normalize_volume(self, volume: float) -> float:
-        norm_volume = log10(volume)
+        """Normalizes the volume to a value between 0 and 1."""
+        # Avoid division by zero when volume is too low
+        if volume < 1e-10:
+            return 0.0
+
+        norm_volume = np.log10(volume)
         norm_volume = (norm_volume - self.MIN_VOLUME) / max(self.MAX_VOLUME - self.MIN_VOLUME, 1e-4)
         norm_volume = min(max(norm_volume, 0), 1)
         return norm_volume
@@ -282,6 +329,17 @@ class LipSync:
             List of PhonemeSegment objects, one per window.
         """
         
+        if audio_data.ndim != 1:
+            raise ValueError(f"Expected 1D audio data, got {audio_data.ndim}D")
+        if sample_rate <= 0:
+            raise ValueError(f"Sample rate must be positive, got {sample_rate}")
+        if window_size_ms <= 0:
+            raise ValueError(f"Window size must be positive, got {window_size_ms}")
+        if fps <= 0:
+            raise ValueError(f"FPS must be at least 1, got {fps}")
+        if len(audio_data) < 1:
+            raise ValueError(f"Audio data must not be empty, got {audio_data}")
+
         downsampled_audio = downsample(audio_data, sample_rate, self.TARGET_SAMPLE_RATE)
         
         # Calculate window and hop sizes
@@ -294,15 +352,22 @@ class LipSync:
             # Calculate window for analysis (with overlap)
             downsampled_chunk = downsampled_audio[i: i + window_size]
             
-            # But only store the non-overlapping hop_size portion in original sample rate
+            # Store the non-overlapping hop_size portion in original sample rate
             original_hop_start = int(i * sample_rate_ratio)
             original_hop_end = int((i + hop_size) * sample_rate_ratio)
             original_hop_chunk = audio_data[original_hop_start: original_hop_end]
             
-            # Process with full window, store only hop
+            # Process with full window, but store only hop_size portion in original sample rate
             lipsync_info = self._process_audio(downsampled_chunk, self.TARGET_SAMPLE_RATE)
             segments.append(
-                PhonemeSegment(lipsync_info.volume, lipsync_info.normalized_volume, original_hop_chunk, lipsync_info.phonemes)
+                PhonemeSegment(
+                    original_hop_start / sample_rate, 
+                    original_hop_end / sample_rate, 
+                    lipsync_info.volume, 
+                    lipsync_info.normalized_volume, 
+                    original_hop_chunk, 
+                    lipsync_info.phonemes
+                )
             )
         
         return segments

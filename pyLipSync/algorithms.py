@@ -1,3 +1,10 @@
+"""
+Audio signal processing algorithms for lip sync analysis.
+
+Implemented directly from: https://github.com/hecomi/uLipSync/blob/main/Assets/uLipSync/Runtime/Core/Algorithm.cs
+And modified to be more efficient and pythonic.
+"""
+
 import numpy as np
 import scipy.signal
 import librosa as lb

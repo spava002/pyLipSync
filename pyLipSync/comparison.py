@@ -1,3 +1,12 @@
+"""
+Comparison methods for MFCC similarity scoring.
+
+Provides multiple algorithms for comparing audio feature vectors:
+- L1 Norm (Manhattan distance)
+- L2 Norm (Euclidean distance)
+- Cosine Similarity
+"""
+
 from enum import Enum
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity

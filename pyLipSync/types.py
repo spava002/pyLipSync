@@ -3,6 +3,13 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Phoneme:
+    """
+    Represents a single phoneme with a target value.
+    
+    Attributes:
+        name: The name of the phoneme
+        target: The target value for the phoneme
+    """
     name: str
     target: float
 
@@ -11,6 +18,19 @@ class Phoneme:
 
 @dataclass
 class PhonemeSegment:
+    """
+    Represents a single audio segment with phoneme analysis results.
+    
+    Attributes:
+        start_time: Start time of segment in seconds
+        end_time: End time of segment in seconds
+        volume: RMS volume of the audio segment
+        normalized_volume: Volume normalized to 0-1 range
+        audio: Raw audio data for this segment
+        phonemes: List of detected phonemes with confidence scores
+    """
+    start_time: float
+    end_time: float
     volume: float
     normalized_volume: float
     audio: np.ndarray
@@ -27,6 +47,15 @@ class PhonemeSegment:
 
 @dataclass
 class LipSyncInfo:
+    """
+    Represents the results of the lip sync analysis.
+    
+    Attributes:
+        mfcc: The MFCC of the audio
+        volume: The RMS volume of the audio
+        normalized_volume: The normalized volume of the audio
+        phonemes: The detected phonemes with confidence scores
+    """
     mfcc: list[float]
     volume: float = None
     normalized_volume: float = None
